@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Asset Investment Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Прибираємо стандартні стрілочки для input type="number" у різних браузерах */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    
+.chartjs-render-monitor,
+canvas#comparisonChart {
+    max-width: 100% !important;
+}
+
+</style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans">
+
+    <header class="bg-gray-800 border-b border-gray-700 p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-xl font-bold text-emerald-450 flex items-center gap-2 shrink-0">
+                🛡️ FinSim <span class="text-sm font-normal text-gray-400">| Мульти-калькулятор</span>
+            </h1>
+            
+            <div class="flex bg-gray-950 p-1 rounded-xl border border-gray-700 w-full max-w-xl mx-auto shadow-inner">
+                <button id="calc-tab-insurance" onclick="switchCalculator('insurance')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-emerald-600 text-white shadow">
+                    💎 LifeCare (СК)
+                </button>
+                <button id="calc-tab-deposit" onclick="switchCalculator('deposit')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-gray-400 hover:text-white">
+                    🏦 Депозит
+                </button>
+                <button id="calc-tab-ovdp" onclick="switchCalculator('ovdp')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-gray-400 hover:text-white">
+                    🇺🇦 ОВДП
+                </button>
+            </div>
+
+            <div class="text-xs bg-emerald-950 text-emerald-400 px-3 py-1 rounded-full border border-emerald-800 whitespace-nowrap hidden sm:block">
+                Параметри активні
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Ліва панель керування -->
+        <section class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl flex flex-col gap-5 h-fit">
+            
+            <div class="flex bg-gray-900 p-1 rounded-xl border border-gray-700">
+                <button id="tab-btn-params" onclick="switchSubTab('params')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-gray-800 text-emerald-400 border border-gray-700 shadow">
+                    Параметри
+                </button>
+                <button id="tab-btn-macro" onclick="switchSubTab('macro')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-gray-400 hover:text-white">
+                    Макро-дані / Ставки
+                </button>
+            </div>
+
+            <div id="panel-params" class="flex flex-col gap-5">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Капіталізація (Тип відсотка)</label>
+                    <div class="grid grid-cols-2 gap-2 bg-gray-900 p-1 rounded-xl border border-gray-700">
+                        <button id="btn-simple" onclick="setInterestType('simple')" class="py-2 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">
+                            Простий
+                        </button>
+                        <button id="btn-compound" onclick="setInterestType('compound')" class="py-2 text-sm font-medium rounded-lg transition-all bg-emerald-600 text-white shadow">
+                            Складний
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Внесок / Сума з ручним введенням -->
+                <div>
+                    <div class="flex justify-between items-center text-sm mb-1.5">
+                        <span id="label-amount" class="text-gray-400">Щомісячний внесок</span>
+                        <div class="flex items-center gap-1 font-bold text-emerald-400">
+                            <input type="text" id="val-amount-input" class="bg-transparent text-right font-bold text-emerald-450 focus:outline-none border-b border-dashed border-emerald-500/30 focus:border-solid focus:border-emerald-500 transition-all w-24 p-0 select-all focus:ring-0 text-base" value="10 000">
+                            <span>₴</span>
+                        </div>
+                    </div>
+                    <input type="range" id="input-amount" min="1000" max="50000" step="500" value="10000" 
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                </div>
+
+                <!-- Термін з ручним введенням та розумною селекцією -->
+                <div>
+                    <div class="flex justify-between items-center text-sm mb-1.5">
+                        <span class="text-gray-400">Термін розміщення</span>
+                        <div class="flex items-center gap-1 font-bold text-emerald-450">
+                            <!-- Блок ручного введення (для LifeCare та ОВДП) -->
+                            <div id="time-input-container" class="flex items-center gap-1">
+                                <input type="text" id="val-time-input" class="bg-transparent text-right font-bold text-emerald-450 focus:outline-none border-b border-dashed border-emerald-500/30 focus:border-solid focus:border-emerald-500 transition-all w-10 p-0 select-all focus:ring-0 text-base" value="10">
+                                <span id="val-time-unit" class="text-emerald-400 font-bold">років</span>
+                            </div>
+                            <!-- Блок селектора (для Депозиту) -->
+                            <div id="time-select-container" class="hidden">
+                                <select id="val-time-select" class="bg-transparent font-bold text-emerald-450 focus:outline-none cursor-pointer text-right border-b border-dashed border-emerald-500/30 p-0 focus:ring-0 text-base">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="range" id="input-time" min="3" max="35" step="1" value="10" 
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                </div>
+
+                <!-- Ставка з ручним введенням -->
+                <div>
+                    <div class="flex justify-between items-center text-sm mb-1.5">
+                        <span class="text-gray-400">Річна ставка</span>
+                        <div class="flex items-center gap-1 font-bold text-emerald-400">
+                            <input type="text" id="val-rate-input" class="bg-transparent text-right font-bold text-emerald-450 focus:outline-none border-b border-dashed border-emerald-500/30 focus:border-solid focus:border-emerald-500 transition-all w-12 p-0 select-all focus:ring-0 text-base" value="10.0">
+                            <span>% річних</span>
+                        </div>
+                    </div>
+                    <input type="range" id="input-rate" min="1" max="25" step="0.5" value="10.0" 
+                           class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                </div>
+
+                <div id="compound-period-block">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Період нарахування відсотків</label>
+                    <select id="select-period" onchange="calculateAndUpdate()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium">
+                    </select>
+                </div>
+
+                <div id="deposit-rollover-block" class="hidden">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Після завершення строку</label>
+                    <select id="select-deposit-rollover" onchange="calculateAndUpdate()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium">
+                        <option value="single" selected>Завершити депозит</option>
+                        <option value="rollover_principal">Автопролонгація: додавати відсотки до вкладу</option>
+                        <option value="rollover_payout">Автопролонгація: виплачувати відсотки на рахунок</option>
+                    </select>
+
+                    <div id="deposit-horizon-block" class="mt-3">
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Горизонт моделювання</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="select-deposit-horizon" onchange="calculateAndUpdate()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium">
+                                <option value="1">1 рік</option>
+                                <option value="2">2 роки</option>
+                                <option value="3">3 роки</option>
+                                <option value="5" selected>5 років</option>
+                                <option value="7">7 років</option>
+                                <option value="10">10 років</option>
+                            </select>
+                            <div class="flex items-center justify-center rounded-lg border border-gray-700 bg-gray-950 px-3 text-xs text-gray-400">
+                                Окремо від строку одного депозиту
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-[10px] text-gray-400 mt-2">Працює лише для вкладки Депозит; строк вище = один цикл, а горизонт моделювання = загальний період автопролонгації.</div>
+                    <div class="text-[10px] text-emerald-400/80 mt-1">Підказка: 12 міс. + горизонт 5 років = 1-річний депозит, який моделюється на 5 років.</div>
+                </div>
+
+                <!-- Податкова знижка ПДФО для LifeCare (СК) -->
+                <div id="insurance-tax-rebate-block" class="flex items-center justify-between p-3 bg-emerald-950/45 border border-emerald-800/50 rounded-xl">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold text-emerald-400">Податкова знижка (+18% ПДФО)</span>
+                        <span class="text-[10px] text-gray-400">Повернення податку державою щороку</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="input-tax-rebate" class="sr-only peer" onchange="calculateAndUpdate()">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <!-- Комісія ОВДП за купівлю -->
+                <div id="ovdp-fee-block" class="hidden flex flex-col gap-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-400">Комісія брокера за купівлю (загалом)</span>
+                            <span class="font-bold text-amber-400" id="val-ovdp-fee">200 ₴</span>
+                        </div>
+                        <input type="range" id="input-ovdp-fee" min="0" max="2000" step="50" value="200" 
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                    </div>
+                    
+                    <!-- Комісія ОВДП за виведення / обслуговування (%) -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-400">Виведення / обслуговування (%)</span>
+                            <span class="font-bold text-amber-400" id="val-ovdp-withdrawal-fee">0.2%</span>
+                        </div>
+                        <input type="range" id="input-ovdp-withdrawal-fee" min="0" max="3" step="0.1" value="0.2" 
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500" oninput="calculateAndUpdate()">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">З чим порівняти на графіку</label>
+                    <select id="select-asset" onchange="handleAssetChange()" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer">
+                        <option value="deposit">Гривневий Депозит</option>
+                        <option value="ovdp">Державні ОВДП</option>
+                        <option value="sp500">Індекс S&P 500 ($)</option>
+                        <option value="npf">НПФ (Пенсійний фонд)</option>
+                        <option value="kua" selected>КУА / ПІФ</option>
+                        <option value="property">Житлова нерухомість</option>
+                        <option value="custom">Власний варіант (ручне введення)</option>
+                    </select>
+                </div>
+
+                <div id="custom-fields-container" class="pt-2 border-t border-gray-700 hidden">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-1 text-center">Ставка (%)</label>
+                            <input type="number" id="input-alt" value="15.0" step="0.1" min="0" 
+                                   class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-center text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 mb-1 text-center">Податок (%)</label>
+                            <input type="number" id="input-alt-tax" value="0.0" step="0.5" min="0" 
+                                   class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-center text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Блок макроекономіки -->
+            <div id="panel-macro" class="flex flex-col gap-4 hidden max-h-[550px] overflow-y-auto pr-1">
+                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider border-b border-gray-700 pb-1">Економічні індикатори</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 text-center">Kурс (₴/$)</label>
+                        <input type="number" id="input-usd-current" value="40.50" step="0.1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-xs text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 text-center">Девальв. (%)</label>
+                        <input type="number" id="input-usd-forecast" value="3.5" step="0.1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-xs text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 mb-1 text-center">Інфляція (%)</label>
+                        <input type="number" id="input-inflation" value="6.5" step="0.1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-xs text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center border-b border-gray-700 pb-1 mt-2">
+                    <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Базові інструменти</h3>
+                    <span class="text-[9px] text-gray-500">(Ставка % / Податок %)</span>
+                </div>
+                
+                <div class="flex flex-col gap-2 text-xs">
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <span class="text-gray-400 font-medium">Депозит</span>
+                        <input type="number" id="macro-rate-deposit" value="11.0" step="0.1" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="macro-tax-deposit" value="23.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <span class="text-gray-400 font-medium">ОВДП</span>
+                        <input type="number" id="macro-rate-ovdp" value="15.0" step="0.1" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="macro-tax-ovdp" value="0.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <span class="text-gray-400 font-medium">S&P 500 ($)</span>
+                        <input type="number" id="macro-rate-sp500" value="10.0" step="0.1" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="macro-tax-sp500" value="23.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <span class="text-gray-400 font-medium">НПФ</span>
+                        <input type="number" id="macro-rate-npf" value="12.0" step="0.1" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="macro-tax-npf" value="0.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <span class="text-gray-400 font-medium">КУА / ПІФ</span>
+                        <input type="number" id="macro-rate-kua" value="14.0" step="0.1" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="macro-tax-kua" value="23.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <span class="text-gray-400 font-medium">Нерухомість</span>
+                        <input type="number" id="macro-rate-property" value="7.0" step="0.1" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="macro-tax-property" value="23.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 items-center pt-1 border-t border-gray-700/50">
+                        <span class="text-emerald-400 font-medium">LifeCare (СК)</span>
+                        <span class="text-gray-500 text-center text-[11px]">звільнено</span>
+                        <input type="number" id="macro-tax-insurance" value="0.0" step="0.5" class="macro-changer w-full bg-gray-900 border border-gray-700 rounded-lg p-1.5 text-center text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Права панель з картами та графіком -->
+        <section class="lg:col-span-2 flex flex-col gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow">
+                    <p id="title-card-invested" class="text-xs text-gray-400 uppercase tracking-wider">Всього внесено</p>
+                    <p id="card-total-invested" class="text-xl font-bold mt-1 text-gray-200">0 ₴</p>
+                </div>
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow flex flex-col justify-between min-h-[96px]">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wider">Сума до виплати</p>
+                        <p id="card-total-accumulated" class="text-xl font-bold mt-1 text-emerald-450">0 ₴</p>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow flex flex-col justify-between min-h-[96px]">
+                    <div>
+                        <p id="title-card-profit" class="text-xs text-gray-400 uppercase tracking-wider">Чистий прибуток</p>
+                        <p id="card-net-profit" class="text-xl font-bold mt-1 text-cyan-400">0 ₴</p>
+                    </div>
+                    <!-- Додатковий інформаційний рядок для ПДФО пільги -->
+                    <p id="card-sub-tax-rebate" class="text-[10px] text-emerald-400/85 mt-1 font-semibold hidden"></p>
+                </div>
+            </div>
+
+            <!-- Контейнер для графіка та інтерактивних коментарів -->
+            <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl flex flex-col min-h-[500px] max-h-[520px] relative">
+                
+                <!-- НОВЕ: Рамка з коментарями та фінансовими висновками -->
+                <div id="insight-box" class="lg:absolute lg:top-6 lg:left-6 lg:w-[290px] w-full bg-gray-900/95 backdrop-blur-md border border-gray-700/80 p-4 rounded-xl shadow-2xl z-10 text-xs flex flex-col gap-2 transition-all duration-300 mb-4 lg:mb-0 lg:pointer-events-none">
+                    <!-- Буде наповнено динамічно через JS -->
+                </div>
+
+                <div class="w-full h-[380px]">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentCalculator = 'insurance'; 
+        let interestType = 'compound'; 
+        let chart;
+
+        const depositSteps = [
+            { label: '3 дні', days: 3, isDays: true },
+            { label: '3 міс.', months: 3 },
+            { label: '6 міс.', months: 6 },
+            { label: '9 міс.', months: 9 },
+            { label: '12 міс.', months: 12 },
+            { label: '18 міс.', months: 18 },
+            { label: '24 міс.', months: 24 },
+            { label: '36 міс.', months: 36 }
+        ];
+
+        const assetBenchmarks = {
+            insurance: { idRate: 'macro-rate-deposit', idTax: 'macro-tax-insurance', baseLabel: 'Програма LifeCare' }, 
+            deposit: { idRate: 'macro-rate-deposit', idTax: 'macro-tax-deposit', baseLabel: 'Гривневий Депозит' },
+            ovdp: { idRate: 'macro-rate-ovdp', idTax: 'macro-tax-ovdp', baseLabel: 'Державні ОВДП' },
+            sp500: { idRate: 'macro-rate-sp500', idTax: 'macro-tax-sp500', baseLabel: 'Індекс S&P 500 ($)' },
+            npf: { idRate: 'macro-rate-npf', idTax: 'macro-tax-npf', baseLabel: 'НПФ (Пенсійний фонд)' },
+            kua: { idRate: 'macro-rate-kua', idTax: 'macro-tax-kua', baseLabel: 'КУА / ПІФ' },
+            property: { idRate: 'macro-rate-property', idTax: 'macro-tax-property', baseLabel: 'Житлова нерухомість' },
+            custom: { baseLabel: 'Власний варіант' }
+        };
+
+        const inputs = {
+            amountRange: document.getElementById('input-amount'),
+            amountInput: document.getElementById('val-amount-input'),
+            
+            timeRange: document.getElementById('input-time'),
+            timeInput: document.getElementById('val-time-input'),
+            timeSelect: document.getElementById('val-time-select'),
+            
+            rateRange: document.getElementById('input-rate'),
+            rateInput: document.getElementById('val-rate-input'),
+            
+            ovdpFee: document.getElementById('input-ovdp-fee'),
+            ovdpWithdrawalFee: document.getElementById('input-ovdp-withdrawal-fee'),
+            taxRebateToggle: document.getElementById('input-tax-rebate'),
+            
+            alt: document.getElementById('input-alt'),
+            altTax: document.getElementById('input-alt-tax'),
+            assetSelect: document.getElementById('select-asset'),
+            compoundPeriod: document.getElementById('select-period'),
+            usdCurrent: document.getElementById('input-usd-current'),
+            usdForecast: document.getElementById('input-usd-forecast'),
+            inflation: document.getElementById('input-inflation')
+        };
+
+        const views = {
+            timeUnit: document.getElementById('val-time-unit'),
+            timeInputContainer: document.getElementById('time-input-container'),
+            timeSelectContainer: document.getElementById('time-select-container'),
+            ovdpFee: document.getElementById('val-ovdp-fee'),
+            ovdpWithdrawalFee: document.getElementById('val-ovdp-withdrawal-fee'),
+            cardInvested: document.getElementById('card-total-invested'),
+            cardAccumulated: document.getElementById('card-total-accumulated'),
+            cardProfit: document.getElementById('card-net-profit'),
+            cardSubTaxRebate: document.getElementById('card-sub-tax-rebate'),
+            insightBox: document.getElementById('insight-box')
+        };
+
+        // --- ДОДАТКОВІ UX-ХЕЛПЕРИ ДЛЯ ФОРМАТУВАННЯ ТА СХИЛЯНЬ ---
+        
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+
+        function parseNumber(str) {
+            let clean = str.replace(/[^\d.,]/g, '').replace(',', '.');
+            return parseFloat(clean) || 0;
+        }
+
+        function getYearLabel(years) {
+            const lastDigit = years % 10;
+            const lastTwoDigits = years % 100;
+            if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return 'років';
+            if (lastDigit === 1) return 'рік';
+            if (lastDigit >= 2 && lastDigit <= 4) return 'роки';
+            return 'років';
+        }
+
+        function getMonthLabel(months) {
+            const lastDigit = months % 10;
+            const lastTwoDigits = months % 100;
+            if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return 'місяців';
+            if (lastDigit === 1) return 'місяць';
+            if (lastDigit >= 2 && lastDigit <= 4) return 'місяці';
+            return 'місяців';
+        }
+
+        function populateDepositTimeSelect() {
+            inputs.timeSelect.innerHTML = '';
+            depositSteps.forEach((step, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = step.label;
+                opt.className = "bg-gray-800 text-white font-bold";
+                inputs.timeSelect.appendChild(opt);
+            });
+        }
+
+        function updateAssetSelectLabels() {
+            const selectEl = inputs.assetSelect;
+            if (!selectEl) return;
+
+            for (let option of selectEl.options) {
+                const val = option.value;
+                const bench = assetBenchmarks[val];
+                
+                if (bench && val !== 'custom') {
+                    const rateVal = parseFloat(document.getElementById(bench.idRate).value) || 0;
+                    const taxVal = parseFloat(document.getElementById(bench.idTax).value) || 0;
+                    const taxText = taxVal > 0 ? `, под. ${taxVal}%` : ', без под.';
+                    
+                    option.text = `${bench.baseLabel} (${rateVal}% річних${taxText})`;
+                } else if (val === 'custom') {
+                    option.text = 'Власний варіант (ручне введення)';
+                }
+            }
+        }
+
+        // --- ЛОГІКА СИНХРОНІЗАЦІЇ SLIDER <-> INPUT ---
+
+        function syncAmountFromRange() {
+            inputs.amountInput.value = formatNumber(inputs.amountRange.value);
+            updateDepositRolloverVisibility();
+            calculateAndUpdate();
+        }
+
+        function syncAmountFromInput() {
+            let val = parseNumber(inputs.amountInput.value);
+            const min = parseFloat(inputs.amountRange.min);
+            const max = parseFloat(inputs.amountRange.max);
+            
+            if (val < min) val = min;
+            if (val > max) val = max;
+            
+            inputs.amountRange.value = val;
+            inputs.amountInput.value = formatNumber(val);
+            calculateAndUpdate();
+        }
+
+        function syncTimeFromRange() {
+            const val = parseInt(inputs.timeRange.value);
+            if (currentCalculator === 'deposit') {
+                inputs.timeSelect.value = val;
+            } else {
+                inputs.timeInput.value = val;
+                views.timeUnit.innerText = currentCalculator === 'insurance' ? getYearLabel(val) : getMonthLabel(val);
+            }
+            calculateAndUpdate();
+        }
+
+        // Слухач зміни розміру вікна для динамічного зсуву графіка
+        window.addEventListener('resize', () => {
+            if (chart) {
+                chart.options.layout.padding.left = window.innerWidth > 1024 ? 310 : 10;
+                chart.update();
+            }
+        });
+
+        function syncTimeFromInput() {
+            let val = parseInt(inputs.timeInput.value) || 0;
+            const min = parseInt(inputs.timeRange.min);
+            const max = parseInt(inputs.timeRange.max);
+            
+            if (val < min) val = min;
+            if (val > max) val = max;
+            
+            inputs.timeRange.value = val;
+            inputs.timeInput.value = val;
+            views.timeUnit.innerText = currentCalculator === 'insurance' ? getYearLabel(val) : getMonthLabel(val);
+            calculateAndUpdate();
+        }
+
+        function syncTimeFromSelect() {
+            inputs.timeRange.value = inputs.timeSelect.value;
+            calculateAndUpdate();
+        }
+
+        function syncRateFromRange() {
+            inputs.rateInput.value = parseFloat(inputs.rateRange.value).toFixed(1);
+            calculateAndUpdate();
+        }
+
+        function syncRateFromInput() {
+            let val = parseFloat(inputs.rateInput.value.replace(',', '.')) || 0;
+            const min = parseFloat(inputs.rateRange.min);
+            const max = parseFloat(inputs.rateRange.max);
+            
+            if (val < min) val = min;
+            if (val > max) val = max;
+            
+            inputs.rateRange.value = val;
+            inputs.rateInput.value = val.toFixed(1);
+            calculateAndUpdate();
+        }
+
+        // --- ПЕРЕМИКАННЯ КАЛЬКУЛЯТОРІВ ---
+
+        function switchCalculator(calcType) {
+            currentCalculator = calcType;
+            
+            ['insurance', 'deposit', 'ovdp'].forEach(t => {
+                const btn = document.getElementById(`calc-tab-${t}`);
+                if (t === calcType) {
+                    btn.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-emerald-600 text-white shadow";
+                } else {
+                    btn.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-gray-400 hover:text-white";
+                }
+            });
+
+            const amountRange = inputs.amountRange;
+            const timeRange = inputs.timeRange;
+            const periodSelect = inputs.compoundPeriod;
+            const labelAmount = document.getElementById('label-amount');
+            const ovdpBlock = document.getElementById('ovdp-fee-block');
+            const insuranceTaxRebateBlock = document.getElementById('insurance-tax-rebate-block');
+
+            if (calcType === 'insurance') {
+                labelAmount.innerText = 'Щомісячний внесок';
+                ovdpBlock.classList.add('hidden');
+                insuranceTaxRebateBlock.classList.remove('hidden');
+                
+                amountRange.min = "1000";
+                amountRange.max = "50000";
+                amountRange.step = "500";
+                amountRange.value = "10000";
+                inputs.amountInput.value = formatNumber(10000);
+
+                views.timeInputContainer.classList.remove('hidden');
+                views.timeSelectContainer.classList.add('hidden');
+                timeRange.min = "3";
+                timeRange.max = "35";
+                timeRange.step = "1";
+                timeRange.value = "10";
+                inputs.timeInput.value = 10;
+                views.timeUnit.innerText = getYearLabel(10);
+                
+                inputs.rateRange.value = 10.0;
+                inputs.rateInput.value = "10.0";
+
+                periodSelect.innerHTML = `
+                    <option value="12" selected>Щомісячно</option>
+                    <option value="4">Квартально</option>
+                    <option value="1">Щорічно</option>
+                `;
+                setInterestType('compound');
+
+            } else if (calcType === 'deposit') {
+                labelAmount.innerText = 'Сума разового вкладу';
+                ovdpBlock.classList.add('hidden');
+                insuranceTaxRebateBlock.classList.add('hidden');
+                
+                amountRange.min = "5000";
+                amountRange.max = "600000";
+                amountRange.step = "5000";
+                amountRange.value = "100000";
+                inputs.amountInput.value = formatNumber(100000);
+
+                views.timeInputContainer.classList.add('hidden');
+                views.timeSelectContainer.classList.remove('hidden');
+                populateDepositTimeSelect();
+                
+                timeRange.min = "0";
+                timeRange.max = (depositSteps.length - 1).toString();
+                timeRange.step = "1";
+                timeRange.value = "4"; 
+                inputs.timeSelect.value = "4";
+
+                inputs.rateRange.value = parseFloat(document.getElementById('macro-rate-deposit').value) || 11.0;
+                inputs.rateInput.value = parseFloat(inputs.rateRange.value).toFixed(1);
+
+                periodSelect.innerHTML = `
+                    <option value="365" selected>Щоденно (капіталізація)</option>
+                    <option value="12">Щомісячно</option>
+                    <option value="1">В кінці терміну</option>
+                `;
+                const depositHorizonSelect = document.getElementById('select-deposit-horizon');
+                if (depositHorizonSelect) depositHorizonSelect.value = "5";
+                setInterestType('compound');
+
+            } else if (calcType === 'ovdp') {
+                labelAmount.innerText = 'Сума купівлі облігацій';
+                ovdpBlock.classList.remove('hidden');
+                insuranceTaxRebateBlock.classList.add('hidden');
+                
+                amountRange.min = "5000";
+                amountRange.max = "600000";
+                amountRange.step = "5000";
+                amountRange.value = "100000";
+                inputs.amountInput.value = formatNumber(100000);
+
+                views.timeInputContainer.classList.remove('hidden');
+                views.timeSelectContainer.classList.add('hidden');
+                timeRange.min = "3";
+                timeRange.max = "60";
+                timeRange.step = "1";
+                timeRange.value = "12";
+                inputs.timeInput.value = 12;
+                views.timeUnit.innerText = getMonthLabel(12);
+                
+                inputs.rateRange.value = parseFloat(document.getElementById('macro-rate-ovdp').value) || 15.0;
+                inputs.rateInput.value = parseFloat(inputs.rateRange.value).toFixed(1);
+
+                periodSelect.innerHTML = `
+                    <option value="2" selected>Раз на півроку (виплата купона)</option>
+                    <option value="1">Раз на рік</option>
+                `;
+                setInterestType('simple');
+            }
+
+            updateDepositRolloverVisibility();
+            updateAssetSelectLabels();
+            handleAssetChange();
+        }
+
+        function switchSubTab(tab) {
+            const btnParams = document.getElementById('tab-btn-params');
+            const btnMacro = document.getElementById('tab-btn-macro');
+            const panelParams = document.getElementById('panel-params');
+            const panelMacro = document.getElementById('panel-macro');
+
+            if (tab === 'params') {
+                btnParams.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-gray-800 text-emerald-400 border border-gray-700 shadow";
+                btnMacro.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-gray-400 hover:text-white";
+                panelParams.classList.remove('hidden');
+                panelMacro.classList.add('hidden');
+            } else {
+                btnMacro.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-gray-800 text-emerald-400 border border-gray-700 shadow";
+                btnParams.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-gray-400 hover:text-white";
+                panelMacro.classList.remove('hidden');
+                panelParams.classList.add('hidden');
+            }
+        }
+
+        function setInterestType(type) {
+            interestType = type;
+            document.getElementById('btn-simple').className = type === 'simple' ? 'py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white shadow' : 'py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-white';
+            document.getElementById('btn-compound').className = type === 'compound' ? 'py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white shadow' : 'py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-white';
+            
+            const periodBlock = document.getElementById('compound-period-block');
+        const depositRolloverBlock = document.getElementById('deposit-rollover-block');
+            if (type === 'simple' && currentCalculator !== 'ovdp') {
+                periodBlock.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                periodBlock.classList.remove('opacity-40', 'pointer-events-none');
+            }
+            calculateAndUpdate();
+        }
+
+        
+function updateDepositRolloverVisibility() {
+    const depositRolloverBlock = document.getElementById('deposit-rollover-block');
+    const depositHorizonBlock = document.getElementById('deposit-horizon-block');
+    if (!depositRolloverBlock) return;
+    if (currentCalculator === 'deposit') {
+        depositRolloverBlock.classList.remove('hidden');
+        if (depositHorizonBlock) depositHorizonBlock.classList.remove('hidden');
+    } else {
+        depositRolloverBlock.classList.add('hidden');
+        if (depositHorizonBlock) depositHorizonBlock.classList.add('hidden');
+    }
+}
+
+function handleAssetChange() {
+            const selectedAsset = inputs.assetSelect.value;
+            const customContainer = document.getElementById('custom-fields-container');
+            
+            if (selectedAsset !== 'custom') {
+                const config = assetBenchmarks[selectedAsset];
+                inputs.alt.value = parseFloat(document.getElementById(config.idRate).value) || 0;
+                inputs.altTax.value = parseFloat(document.getElementById(config.idTax).value) || 0;
+                customContainer.classList.add('hidden');
+            } else {
+                customContainer.classList.remove('hidden');
+            }
+            calculateAndUpdate();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Тіло вкладу', data: [], borderColor: '#9ca3af', borderWidth: 2, borderDash: [5, 5], fill: false, tension: 0 },
+                        { label: 'Обраний інструмент', data: [], borderColor: '#34d399', borderWidth: 4, fill: false, tension: 0 },
+                        { label: 'Порівняльний інструмент', data: [], borderColor: '#38bdf8', borderWidth: 3, fill: false, tension: 0 },
+                        { label: 'Знецінення через інфляцію', data: [], borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 2, borderDash: [5, 5], fill: true, backgroundColor: 'rgba(239, 68, 68, 0.05)', tension: 0.3, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: { legend: { labels: { color: '#e5e7eb', font: { size: 11 } } } },
+                    layout: {
+                        padding: {
+                            // На великих екранах зрушуємо графік вправо, щоб звільнити місце для аналітичного блоку
+                            left: window.innerWidth > 1024 ? 310 : 10,
+                            top: 10,
+                            right: 15,
+                            bottom: 10
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: '#374151' }, ticks: { color: '#e5e7eb' } },
+                        y: { grid: { color: '#374151' }, ticks: { color: '#e5e7eb' } }
+                    }
+                }
+            });
+        }
+
+        // --- МАТЕМАТИЧНИЙ РОЗРАХУНОК ---
+
+        function calculateAndUpdate() {
+            const amount = parseFloat(inputs.amountRange.value) || 0;
+            const timeRaw = parseInt(inputs.timeRange.value) || 0;
+            const rate = (parseFloat(inputs.rateRange.value) / 100) || 0;
+            const inflationRate = (parseFloat(inputs.inflation.value) / 100) || 0;
+            
+            const selectedAsset = inputs.assetSelect.value;
+            if (selectedAsset !== 'custom') {
+                const config = assetBenchmarks[selectedAsset];
+                inputs.alt.value = document.getElementById(config.idRate).value;
+                inputs.altTax.value = document.getElementById(config.idTax).value;
+            }
+
+            const altRateRaw = (parseFloat(inputs.alt.value) / 100) || 0;
+            const altTax = (parseFloat(inputs.altTax.value) / 100) || 0;
+
+            let taxRate = 0;
+            if (currentCalculator === 'deposit') taxRate = (parseFloat(document.getElementById('macro-tax-deposit').value) / 100) || 0.23;
+            if (currentCalculator === 'ovdp') taxRate = (parseFloat(document.getElementById('macro-tax-ovdp').value) / 100) || 0;
+            if (currentCalculator === 'insurance') taxRate = (parseFloat(document.getElementById('macro-tax-insurance').value) / 100) || 0;
+
+            let labels = [];
+            let dataInvested = [];
+            let dataMainAsset = [];
+            let dataAltAsset = [];
+            let dataInflation = [];
+
+            let finalInvested = 0;
+            let finalAccumulated = 0;
+            let totalTaxRebateRefunded = 0;
+            let interestGrossForStats = 0;
+
+            // Скидаємо відображення інфо-рядка ПДФО пільги
+            views.cardSubTaxRebate.classList.add('hidden');
+
+            // --- МОДЕЛЬ 1: LIFECARE ---
+            if (currentCalculator === 'insurance') {
+                let totalInvested = 0;
+                let balanceMain = 0;
+                let balanceAlt = 0;
+                let balanceInf = 0;
+                let simpleInterestEarnings = 0;
+                
+                const totalMonths = timeRaw * 12;
+                const compoundFreq = parseInt(inputs.compoundPeriod.value) || 12;
+                const monthsPerPeriod = 12 / compoundFreq;
+                
+                const isTaxRebateActive = inputs.taxRebateToggle.checked;
+
+                for (let m = 1; m <= totalMonths; m++) {
+                    totalInvested += amount;
+                    balanceMain += amount;
+                    balanceAlt += amount;
+                    balanceInf += amount;
+
+                    if (interestType === 'simple') {
+                        simpleInterestEarnings += totalInvested * (rate / 12);
+                    } else if (m % monthsPerPeriod === 0) {
+                        balanceMain *= (1 + (rate / compoundFreq));
+                    }
+
+                    // Наприкінці кожного року (кожні 12 місяців) розраховуємо та нараховуємо податкову знижку
+                    if (m % 12 === 0 && isTaxRebateActive) {
+                        const annualContribution = amount * 12;
+                        const maxRebateBase = 21180 * 3; // ліміт НКУ: 3 мінзарплати
+                        const rebateAmount = Math.min(annualContribution, maxRebateBase) * 0.18; // 18% ПДФО повернення (з лімітом)
+                        totalTaxRebateRefunded += rebateAmount;
+                        
+                        // Додаємо суму повернутого податку до капіталу (реінвестуємо її)
+                        if (interestType === 'compound') {
+                            balanceMain += rebateAmount;
+                        } else {
+                            balanceMain += rebateAmount;
+                        }
+                    }
+
+                    balanceAlt *= (1 + (altRateRaw * (1 - altTax) / 12));
+                    balanceInf /= (1 + (inflationRate / 12));
+
+                    if (m % 12 === 0 || m === totalMonths) {
+                        if (m % 12 === 0) {
+                            labels.push(`Рік ${m / 12}`);
+                            dataInvested.push(totalInvested);
+                            let mainCurrent = interestType === 'compound' ? balanceMain : (balanceMain + simpleInterestEarnings);
+                            dataMainAsset.push(Math.round(totalInvested + (mainCurrent - totalInvested) * (1 - taxRate)));
+                            dataAltAsset.push(Math.round(balanceAlt));
+                            dataInflation.push(Math.round(balanceInf));
+                        }
+                    }
+                }
+                finalInvested = totalInvested;
+                finalAccumulated = dataMainAsset[dataMainAsset.length - 1] || balanceMain;
+
+                // Якщо увімкнена податкова пільга, показуємо інформацію на картці
+                if (isTaxRebateActive && totalTaxRebateRefunded > 0) {
+                    views.cardSubTaxRebate.innerText = `накопичено повернення ПДФО за весь строк: +${Math.round(totalTaxRebateRefunded).toLocaleString('uk-UA')} ₴`;
+                    views.cardSubTaxRebate.classList.remove('hidden');
+                }
+            }
+
+            // --- МОДЕЛЬ 2: ДЕПОЗИТ ---
+            else if (currentCalculator === 'deposit') {
+                const selectedStep = depositSteps[timeRaw];
+                finalInvested = amount;
+                const daysInYear = 365;
+                const periodSelect = inputs.compoundPeriod.value;
+                const depositRolloverMode = document.getElementById('select-deposit-rollover')?.value || 'single';
+                const depositHorizonYears = parseFloat(document.getElementById('select-deposit-horizon')?.value || '5');
+
+                let cycleYears = selectedStep.isDays ? (selectedStep.days / daysInYear) : (selectedStep.months / 12);
+                let t = depositHorizonYears;
+
+                function calcDepositProfitForYears(principal, years) {
+                    if (years <= 0) return 0;
+
+                    if (interestType === 'simple' || periodSelect === '1') {
+                        return principal * rate * years;
+                    } else if (periodSelect === '365') {
+                        const days = Math.max(1, Math.round(years * daysInYear));
+                        return principal * (Math.pow(1 + rate / daysInYear, days) - 1);
+                    } else if (periodSelect === '12') {
+                        const months = Math.max(1, Math.round(years * 12));
+                        return principal * (Math.pow(1 + rate / 12, months) - 1);
+                    }
+                    return principal * rate * years;
+                }
+
+                const fullCycles = Math.floor(depositHorizonYears / cycleYears);
+                const remainderYears = depositHorizonYears - (fullCycles * cycleYears);
+
+                if (depositRolloverMode === 'single') {
+                    const oneCycleYears = Math.min(cycleYears, depositHorizonYears);
+                    interestGrossForStats = calcDepositProfitForYears(amount, oneCycleYears);
+                    finalAccumulated = amount + (interestGrossForStats * (1 - taxRate));
+                } else {
+                    let principal = amount;
+                    let payoutBalance = 0;
+                    let grossTotal = 0;
+
+                    for (let c = 0; c < fullCycles; c++) {
+                        const gross = calcDepositProfitForYears(principal, cycleYears);
+                        const net = gross * (1 - taxRate);
+                        grossTotal += gross;
+
+                        if (depositRolloverMode === 'rollover_principal') {
+                            principal += net;
+                        } else if (depositRolloverMode === 'rollover_payout') {
+                            payoutBalance += net;
+                        }
+                    }
+
+                    if (remainderYears > 0) {
+                        const grossRemainder = calcDepositProfitForYears(principal, remainderYears);
+                        const netRemainder = grossRemainder * (1 - taxRate);
+                        grossTotal += grossRemainder;
+
+                        if (depositRolloverMode === 'rollover_principal') {
+                            principal += netRemainder;
+                        } else if (depositRolloverMode === 'rollover_payout') {
+                            payoutBalance += netRemainder;
+                        }
+                    }
+
+                    interestGrossForStats = grossTotal;
+                    finalAccumulated = depositRolloverMode === 'rollover_principal'
+                        ? principal
+                        : principal + payoutBalance;
+                }
+
+                const graphPoints = 6;
+                for (let i = 0; i <= graphPoints; i++) {
+                    let progress = i / graphPoints;
+                    let currentT = t * progress;
+
+                    labels.push(`${currentT.toFixed(1)} р.`);
+                    dataInvested.push(amount);
+
+                    let currentValue = amount;
+
+                    if (depositRolloverMode === 'single') {
+                        const activeYears = Math.min(currentT, cycleYears);
+                        const currentGross = calcDepositProfitForYears(amount, activeYears);
+                        currentValue = amount + (currentGross * (1 - taxRate));
+                        if (currentT > cycleYears) currentValue = Math.round(currentValue);
+                    } else {
+                        const passedFullCycles = Math.floor(currentT / cycleYears);
+                        const passedRemainder = currentT - (passedFullCycles * cycleYears);
+
+                        let principal = amount;
+                        let payoutBalance = 0;
+
+                        for (let c = 0; c < passedFullCycles; c++) {
+                            const gross = calcDepositProfitForYears(principal, cycleYears);
+                            const net = gross * (1 - taxRate);
+
+                            if (depositRolloverMode === 'rollover_principal') {
+                                principal += net;
+                            } else if (depositRolloverMode === 'rollover_payout') {
+                                payoutBalance += net;
+                            }
+                        }
+
+                        if (passedRemainder > 0) {
+                            const gross = calcDepositProfitForYears(principal, passedRemainder);
+                            const net = gross * (1 - taxRate);
+
+                            if (depositRolloverMode === 'rollover_principal') {
+                                principal += net;
+                            } else if (depositRolloverMode === 'rollover_payout') {
+                                payoutBalance += net;
+                            }
+                        }
+
+                        currentValue = depositRolloverMode === 'rollover_principal'
+                            ? principal
+                            : principal + payoutBalance;
+                    }
+
+                    dataMainAsset.push(Math.round(currentValue));
+                    dataAltAsset.push(Math.round(amount * Math.pow(1 + altRateRaw * (1 - altTax), currentT)));
+                    dataInflation.push(Math.round(amount / Math.pow(1 + inflationRate, currentT)));
+                }
+            }
+
+            // --- МОДЕЛЬ 3: ОВДП ---
+            else if (currentCalculator === 'ovdp') {
+                const brokerFee = parseFloat(inputs.ovdpFee.value) || 0;
+                const withdrawalFeePercent = (parseFloat(inputs.ovdpWithdrawalFee.value) / 100) || 0;
+                
+                views.ovdpFee.innerText = brokerFee.toLocaleString('uk-UA') + ' ₴';
+                views.ovdpWithdrawalFee.innerText = (withdrawalFeePercent * 100).toFixed(1) + '%';
+
+                finalInvested = amount + brokerFee; 
+                let t = timeRaw / 12;
+                
+                const couponFreq = parseInt(inputs.compoundPeriod.value) || 2;
+                const couponRate = rate / couponFreq;
+                const numCoupons = Math.floor(t * couponFreq);
+                const interestGross = interestType === 'simple'
+                    ? numCoupons * amount * couponRate
+                    : amount * (Math.pow(1 + couponRate, numCoupons) - 1);
+                const withdrawalCost = amount * withdrawalFeePercent;
+                
+                finalAccumulated = amount + interestGross - withdrawalCost; 
+
+                const graphPoints = 6;
+                for (let i = 0; i <= graphPoints; i++) {
+                    let progress = i / graphPoints;
+                    let currentT = t * progress;
+                    
+                    labels.push(`${Math.round(timeRaw * progress)} міс.`);
+                    dataInvested.push(finalInvested);
+                    
+                    const currentCoupons = Math.floor(currentT * couponFreq);
+                    const currentGross = interestType === 'simple'
+                        ? currentCoupons * amount * couponRate
+                        : amount * (Math.pow(1 + couponRate, currentCoupons) - 1);
+                    const currentWithdrawalCost = progress < 1 ? 0 : amount * withdrawalFeePercent;
+                    
+                    const nextValue = Math.round(amount + currentGross - currentWithdrawalCost);
+                    dataMainAsset.push(dataMainAsset.length ? Math.max(dataMainAsset[dataMainAsset.length - 1], nextValue) : nextValue);
+                    let altCurrentValue = amount;
+                    if (interestType === 'simple' || periodSelect === '1') {
+                        altCurrentValue = amount + (amount * altRateRaw * (1 - altTax) * currentT);
+                    } else if (periodSelect === '365') {
+                        const currentDays = Math.max(1, Math.round(currentT * 365));
+                        altCurrentValue = amount * Math.pow(1 + (altRateRaw * (1 - altTax)) / 365, currentDays);
+                    } else if (periodSelect === '12') {
+                        const activeMonths = Math.max(1, Math.round(currentT * 12));
+                        altCurrentValue = amount * Math.pow(1 + (altRateRaw * (1 - altTax)) / 12, activeMonths);
+                    }
+                    dataAltAsset.push(Math.round(altCurrentValue));
+                    dataInflation.push(Math.round(finalInvested / Math.pow(1 + inflationRate, currentT)));
+                }
+                
+                for (let i = 1; i < dataMainAsset.length; i++) {
+                    dataMainAsset[i] = Math.max(dataMainAsset[i], dataMainAsset[i - 1]);
+                }
+            }
+
+            views.cardInvested.innerText = Math.round(finalInvested).toLocaleString('uk-UA') + ' ₴';
+            views.cardAccumulated.innerText = Math.round(finalAccumulated).toLocaleString('uk-UA') + ' ₴';
+            
+            const totalProfit = finalAccumulated - finalInvested;
+            views.cardProfit.innerText = Math.round(totalProfit).toLocaleString('uk-UA') + ' ₴';
+            views.cardProfit.className = totalProfit >= 0 ? "text-xl font-bold mt-1 text-cyan-400" : "text-xl font-bold mt-1 text-red-400";
+
+            // Оновлюємо дані графіка
+            if (chart) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = dataInvested;
+                chart.data.datasets[1].data = dataMainAsset;
+                chart.data.datasets[2].data = dataAltAsset;
+                chart.data.datasets[3].data = dataInflation;
+                
+                chart.data.datasets[1].label = currentCalculator === 'insurance' ? 'Програма LifeCare' : (currentCalculator === 'deposit' ? 'Гривневий Депозит' : 'Державні ОВДП');
+                chart.data.datasets[2].label = selectedAsset === 'custom' ? 'Альтернатива' : assetBenchmarks[selectedAsset].baseLabel;
+                chart.update();
+            }
+
+            // --- НОВЕ: Генерація аналітики та висновків у фрейм ---
+            const finalAlt = dataAltAsset[dataAltAsset.length - 1] || 0;
+            const diff = finalAccumulated - finalAlt;
+            const altLabel = selectedAsset === 'custom' ? 'Альтернативи' : assetBenchmarks[selectedAsset].baseLabel;
+            let insightHTML = "";
+
+            if (currentCalculator === 'insurance') {
+                const isTaxRebateActive = inputs.taxRebateToggle.checked;
+                let rebateInfo = isTaxRebateActive 
+                    ? `Увімкнено податкову пільгу 18%. Ви додатково повертаєте від держави <b>+${formatNumber(Math.round(totalTaxRebateRefunded))} ₴</b>, що прискорює складний відсоток.` 
+                    : `Податкову знижку (+18% ПДФО) не активовано. Її включення дозволить повертати гроші від держави та збільшити прибуток.`;
+                
+                let compComparison = diff >= 0
+                    ? `Накопичення LifeCare випереджають ${altLabel} на <b>+${formatNumber(Math.round(diff))} ₴</b> завдяки звільненню від податків (0%).`
+                    : `Програма відстає від ${altLabel} на <b>${formatNumber(Math.round(Math.abs(diff)))} ₴</b>. Проте ви отримуєте фінансовий захист життя на весь термін.`;
+
+                insightHTML = `
+                    <div class="flex justify-between items-center border-b border-gray-700/60 pb-2 mb-2">
+                        <span class="font-extrabold text-emerald-400 uppercase tracking-wider text-[10px]">Аналітика моделювання</span>
+                        <span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded font-bold">LifeCare</span>
+                    </div>
+                    <div class="space-y-2 text-gray-300">
+                        <p class="leading-relaxed">${compComparison}</p>
+                        <p class="text-[10px] text-emerald-300 bg-emerald-950/40 p-2 rounded-lg border border-emerald-800/40 leading-relaxed">${rebateInfo}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-700/50">
+                        <div>
+                            <span class="text-emerald-450 font-bold block mb-1 text-[10px]">Переваги (+)</span>
+                            <ul class="list-disc pl-3 text-gray-400 space-y-0.5 text-[9px] leading-tight">
+                                <li>0% податку на прибуток</li>
+                                <li>Податкова знижка 18%</li>
+                                <li>Страхове покриття</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <span class="text-amber-500 font-bold block mb-1 text-[10px]">Недоліки (-)</span>
+                            <ul class="list-disc pl-3 text-gray-400 space-y-0.5 text-[9px] leading-tight">
+                                <li>Низька ліквідність</li>
+                                <li>Довгострокові зобов'язання</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else if (currentCalculator === 'deposit') {
+                const taxLost = Math.round(interestGrossForStats * taxRate);
+                const depositMode = document.getElementById('select-deposit-rollover')?.value || 'single';
+
+                let compComparison = diff >= 0
+                    ? `Депозит випереджає ${altLabel} на <b>+${formatNumber(Math.round(diff))} ₴</b>.`
+                    : `Депозит поступається ${altLabel} на <b>${formatNumber(Math.round(Math.abs(diff)))} ₴</b>.`;
+
+                let modeComment = '';
+                let pluses = '';
+                let minuses = '';
+
+                if (depositMode === 'single') {
+                    modeComment = 'Режим <b>без автопролонгації</b>: депозит проходить один цикл, після чого дохід більше не наростає в межах горизонту моделювання.';
+                    pluses = `
+                        <li>Найпростіша та найпрозоріша модель</li>
+                        <li>Легко планувати суму виплати після одного циклу</li>
+                        <li>Висока ліквідність після завершення строку</li>
+                    `;
+                    minuses = `
+                        <li>Горизонт моделювання довший за один цикл не дає додаткового росту</li>
+                        <li>Немає ефекту повторного запуску депозиту</li>
+                        <li>Інфляція швидше з'їдає результат</li>
+                    `;
+                } else if (depositMode === 'rollover_payout') {
+                    modeComment = 'Режим <b>автопролонгації з виплатою відсотків</b>: тіло депозиту не росте, але чисті відсотки накопичуються окремо в межах усього горизонту.';
+                    pluses = `
+                        <li>Тіло депозиту зберігається окремо й не змінюється</li>
+                        <li>Відсотки накопичуються як окремий грошовий потік</li>
+                        <li>Менше ризику помилково переоцінити складний ефект</li>
+                    `;
+                    minuses = `
+                        <li>Немає повноцінного реінвестування прибутку</li>
+                        <li>Фінальний результат нижчий за капіталізацію тіла</li>
+                        <li>Податок зменшує кожну окрему виплату</li>
+                    `;
+                } else {
+                    modeComment = 'Режим <b>автопролонгації з реінвестуванням</b>: після кожного циклу чисті відсотки додаються до тіла депозиту, тому наступний цикл стартує з більшої бази.';
+                    pluses = `
+                        <li>Працює ефект складного росту на довгому горизонті</li>
+                        <li>Кожна нова пролонгація стартує з більшого тіла</li>
+                        <li>Зазвичай дає найвищий фінальний результат</li>
+                    `;
+                    minuses = `
+                        <li>Менше поточної ліквідності під час моделювання</li>
+                        <li>Результат сильніше залежить від довжини горизонту</li>
+                        <li>Податок зменшує базу реінвестування на кожному циклі</li>
+                    `;
+                }
+
+                insightHTML = `
+                    <div class="flex justify-between items-center border-b border-gray-700/60 pb-2 mb-2">
+                        <span class="font-extrabold text-emerald-400 uppercase tracking-wider text-[10px]">Аналітика моделювання</span>
+                        <span class="text-[9px] bg-blue-950 text-blue-400 px-1.5 py-0.5 rounded font-bold">Депозит</span>
+                    </div>
+                    <div class="space-y-2 text-gray-300">
+                        <p class="leading-relaxed">${compComparison}</p>
+                        <p class="text-[10px] text-sky-300 bg-sky-950/20 p-2 rounded-lg border border-sky-900/30 leading-relaxed">
+                            ${modeComment}
+                        </p>
+                        <p class="text-[10px] text-red-400 bg-red-950/20 p-2 rounded-lg border border-red-900/30 leading-relaxed">
+                            Через податки в <b>${(taxRate * 100).toFixed(1)}%</b> (ПДФО + ВЗ) ви втрачаєте <b>-${formatNumber(taxLost)} ₴</b> чистого прибутку, що йде державі.
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-700/50">
+                        <div>
+                            <span class="text-emerald-450 font-bold block mb-1 text-[10px]">Переваги (+)</span>
+                            <ul class="list-disc pl-3 text-gray-400 space-y-0.5 text-[9px] leading-tight">
+                                ${pluses}
+                            </ul>
+                        </div>
+                        <div>
+                            <span class="text-amber-500 font-bold block mb-1 text-[10px]">Недоліки (-)</span>
+                            <ul class="list-disc pl-3 text-gray-400 space-y-0.5 text-[9px] leading-tight">
+                                ${minuses}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else if (currentCalculator === 'ovdp') {
+                const brokerFee = parseFloat(inputs.ovdpFee.value) || 0;
+                const withdrawalFeePercent = (parseFloat(inputs.ovdpWithdrawalFee.value) / 100) || 0;
+                const totalCost = brokerFee + (amount * withdrawalFeePercent);
+
+                let compComparison = diff >= 0
+                    ? `ОВДП виграє у ${altLabel} на <b>+${formatNumber(Math.round(diff))} ₴</b>.`
+                    : `ОВДП програє ${altLabel} на <b>${formatNumber(Math.round(Math.abs(diff)))} ₴</b>.`;
+
+                insightHTML = `
+                    <div class="flex justify-between items-center border-b border-gray-700/60 pb-2 mb-2">
+                        <span class="font-extrabold text-emerald-400 uppercase tracking-wider text-[10px]">Аналітика моделювання</span>
+                        <span class="text-[9px] bg-amber-950 text-amber-400 px-1.5 py-0.5 rounded font-bold">ОВДП</span>
+                    </div>
+                    <div class="space-y-2 text-gray-300">
+                        <p class="leading-relaxed">${compComparison}</p>
+                        <p class="text-[10px] text-amber-400 bg-amber-950/20 p-2 rounded-lg border border-amber-900/30 leading-relaxed">
+                            Накладні витрати (комісія купівлі та виведення) склали <b>-${formatNumber(Math.round(totalCost))} ₴</b>. На коротких проміжках це сильно б'є по доходності!
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-700/50">
+                        <div>
+                            <span class="text-emerald-450 font-bold block mb-1 text-[10px]">Переваги (+)</span>
+                            <ul class="list-disc pl-3 text-gray-400 space-y-0.5 text-[9px] leading-tight">
+                                <li>Звільнено від податків (0%)</li>
+                                <li>100% держгарантія</li>
+                                <li>Висока дохідність</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <span class="text-amber-500 font-bold block mb-1 text-[10px]">Недоліки (-)</span>
+                            <ul class="list-disc pl-3 text-gray-400 space-y-0.5 text-[9px] leading-tight">
+                                <li>Комісії брокерів/банків</li>
+                                <li>Поріг входу (від 1000 ₴)</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            views.insightBox.innerHTML = insightHTML;
+        }
+
+        // --- РЕЄСТРАЦІЯ СЛУХАЧІВ ПОДІЙ ---
+
+        // --- LIVE-ФОРМАТУВАННЯ ІНПУТУ СУМИ ПІД ЧАС ВВЕДЕННЯ ---
+        inputs.amountInput.addEventListener('input', function (e) {
+            let cursorPosition = e.target.selectionStart;
+            const originalLength = e.target.value.length;
+
+            let cleanValue = e.target.value.replace(/\D/g, '');
+
+            if (!cleanValue) {
+                e.target.value = '';
+                return;
+            }
+
+            let formattedValue = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            e.target.value = formattedValue;
+
+            const newLength = formattedValue.length;
+            cursorPosition = cursorPosition + (newLength - originalLength);
+            e.target.setSelectionRange(cursorPosition, cursorPosition);
+        });
+
+        inputs.amountRange.addEventListener('input', syncAmountFromRange);
+        inputs.timeRange.addEventListener('input', syncTimeFromRange);
+        inputs.rateRange.addEventListener('input', syncRateFromRange);
+
+        inputs.amountInput.addEventListener('blur', syncAmountFromInput);
+        inputs.amountInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') inputs.amountInput.blur(); });
+        
+        inputs.timeInput.addEventListener('blur', syncTimeFromInput);
+        inputs.timeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') inputs.timeInput.blur(); });
+        inputs.timeSelect.addEventListener('change', syncTimeFromSelect);
+
+        inputs.rateInput.addEventListener('blur', syncRateFromInput);
+        inputs.rateInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') inputs.rateInput.blur(); });
+
+        if(inputs.ovdpFee) inputs.ovdpFee.addEventListener('input', calculateAndUpdate);
+        inputs.alt.addEventListener('input', () => { inputs.assetSelect.value = 'custom'; calculateAndUpdate(); });
+        inputs.altTax.addEventListener('input', () => { inputs.assetSelect.value = 'custom'; calculateAndUpdate(); });
+        inputs.usdForecast.addEventListener('input', calculateAndUpdate);
+        inputs.inflation.addEventListener('input', calculateAndUpdate);
+
+        document.querySelectorAll('.macro-changer').forEach(input => {
+            input.addEventListener('input', () => {
+                updateAssetSelectLabels();
+                calculateAndUpdate();
+            });
+        });
+
+        window.onload = () => {
+            initChart();
+            switchCalculator('insurance'); 
+        };
+    </script>
+</body>
+</html>
