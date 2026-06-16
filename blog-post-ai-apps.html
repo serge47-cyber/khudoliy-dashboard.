@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Як я навчився «вайбкодити» — і створив три AI-додатки за тиждень</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --accent: #6c8fff;
+    --accent2: #ff7eb3;
+    --accent3: #55e6a5;
+    --text: #e8eaf0;
+    --text-muted: #8b90a8;
+    --border: #2e3250;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+    padding: 0 1rem 4rem;
+  }
+
+  /* HERO */
+  .hero {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 4rem 0 2.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1.1rem;
+  }
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 700;
+    line-height: 1.18;
+    margin-bottom: 1.2rem;
+    color: #fff;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero .lead {
+    font-size: 1.08rem;
+    color: var(--text-muted);
+    max-width: 620px;
+  }
+  .hero .meta {
+    margin-top: 1.6rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* CONTENT */
+  article {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  section {
+    padding: 2.8rem 0 0;
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    line-height: 1.25;
+  }
+
+  h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    margin: 1.6rem 0 0.5rem;
+  }
+
+  p { margin-bottom: 1rem; }
+
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(108,143,255,0.35); }
+  a:hover { border-color: var(--accent); }
+
+  /* CARD GRID */
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin: 2rem 0;
+  }
+
+  .app-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .app-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+  .app-card .badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .badge-blue { background: rgba(108,143,255,0.15); color: var(--accent); }
+  .badge-pink { background: rgba(255,126,179,0.15); color: var(--accent2); }
+  .badge-green { background: rgba(85,230,165,0.15); color: var(--accent3); }
+
+  .app-card h4 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.4rem;
+  }
+  .app-card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.8rem;
+  }
+  .app-card a.card-link {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    border: none;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .app-card a.card-link:hover { color: var(--accent); }
+
+  /* LANG TABLE */
+  .lang-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.92rem;
+  }
+  .lang-table th {
+    text-align: left;
+    padding: 0.6rem 1rem;
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .lang-table td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .lang-table tr:last-child td { border-bottom: none; }
+  .lang-table tr:hover td { background: var(--surface); }
+  .lang-table .flag { font-size: 1.2rem; }
+
+  /* QUOTE */
+  .pull-quote {
+    margin: 2.2rem 0;
+    padding: 1.5rem 2rem;
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .pull-quote p {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-style: italic;
+    color: #d0d4e8;
+    margin: 0;
+  }
+
+  /* VIBE SECTION special bg */
+  .vibe-section {
+    background: linear-gradient(135deg, rgba(108,143,255,0.08) 0%, rgba(85,230,165,0.05) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 2.2rem;
+    margin: 2.5rem 0;
+  }
+  .vibe-section h2 { margin-bottom: 0.8rem; }
+
+  /* STEPS */
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    margin: 1.2rem 0 1.5rem;
+  }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    color: #0f1117;
+    border-radius: 50%;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0 0;
+  }
+
+  /* CTA */
+  .cta-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin: 2.5rem 0;
+    text-align: center;
+  }
+  .cta-block p { color: var(--text-muted); font-size: 0.95rem; }
+  .cta-block .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: center;
+    margin-top: 1.2rem;
+  }
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.55rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.82; border-bottom: none; }
+  .btn-blue { background: var(--accent); color: #0f1117; }
+  .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .hero { padding: 2.5rem 0 1.8rem; }
+    .app-grid { grid-template-columns: 1fr; }
+    .pull-quote { padding: 1.2rem 1.4rem; }
+    .vibe-section { padding: 1.4rem 1.2rem; }
+    .lang-table th, .lang-table td { padding: 0.5rem 0.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="eyebrow">iasienglishclass · Технології та мови · Червень 2026</p>
+  <h1>Як я навчився <em>«вайбкодити»</em> — і створив три AI-додатки за тиждень</h1>
+  <p class="lead">Про новий спосіб творити програми без глибоких технічних знань, про вивчення мов у сучасному форматі — і чому 2026-й рік змінює все для освіти.</p>
+  <p class="meta">Сергій Ясен · iasienglishclass.blogspot.com</p>
+</div>
+
+<article>
+
+  <!-- VIBE CODING -->
+  <div class="vibe-section">
+    <h2>Що таке вайбкодінг — і чому це важливо зараз</h2>
+    <p>Кілька місяців тому я почав чути слово <strong>«vibe coding»</strong> — і спочатку думав, що це чергова модна фраза. Виявилося, що ні.</p>
+    <p>Вайбкодінг — це підхід, при якому ти описуєш ідею звичайною мовою ШІ-асистенту (Claude, Gemini, ChatGPT), а він генерує готовий робочий код. Ти не пишеш рядки вручну — ти <em>керуєш процесом</em>, формулюєш задачу, перевіряєш результат, уточнюєш деталі. Як архітектор, а не муляр.</p>
+    <div class="pull-quote">
+      <p>«Vibe coding — це не про те, щоб не знати програмування. Це про те, щоб думати на рівні ідей, а не синтаксису.»</p>
+    </div>
+    <p>Для мене як педагога і методиста це відкрило неймовірні можливості. За останні тижні я створив три повноцінні AI-додатки — і кожен з них вирішує реальну освітню задачу.</p>
+    <h3>Як це виглядає на практиці:</h3>
+    <ol class="steps">
+      <li>Описуєш задачу — наприклад: «Хочу додаток, який перетворює PDF-підручник на інтерактивний урок»</li>
+      <li>ШІ генерує структуру, код, дизайн — ти бачиш результат за хвилини</li>
+      <li>Ітеруєш: «Додай підтримку румунської мови», «Зроби темний режим», «Виправ баг у навігації»</li>
+      <li>Публікуєш готовий продукт на GitHub Pages або Google AI Studio</li>
+    </ol>
+    <p>Бажаючі можуть досягати результатів <strong>дуже швидко</strong> — навіть без попереднього досвіду в програмуванні. Головне — чітко думати і вміти формулювати задачу.</p>
+  </div>
+
+  <!-- 3 APPS -->
+  <section>
+    <h2>Три додатки, які я створив</h2>
+    <p>Усі три проєкти побудовані на базі Google Gemini API і доступні як відкритий код на GitHub.</p>
+
+    <div class="app-grid">
+
+      <div class="app-card">
+        <span class="badge badge-blue">Освіта</span>
+        <h4>EasyLesson</h4>
+        <p>Трансформер підручника в інтерактивний посібник. Завантажуєш PDF — отримуєш структурований урок із вправами, словником і завданнями для студентів.</p>
+        <a class="card-link" href="https://github.com/serge47-cyber/EasyLesson" target="_blank">
+          ⟶ github.com/serge47-cyber/EasyLesson
+        </a>
+      </div>
+
+      <div class="app-card">
+        <span class="badge badge-pink">Мови</span>
+        <h4>EasyLingo</h4>
+        <p>Творчий AI-тьютор з вивчення мов. Підтримує крос-мовне навчання: англійська, румунська, українська та інші — з адаптацією під рідну мову учня.</p>
+        <a class="card-link" href="https://github.com/serge47-cyber/EasyLingo" target="_blank">
+          ⟶ github.com/serge47-cyber/EasyLingo
+        </a>
+      </div>
+
+      <div class="app-card">
+        <span class="badge badge-green">ШІ-грамотність</span>
+        <h4>BasicAI</h4>
+        <p>Інтерактивний курс «Основи штучного інтелекту» — 17 уроків з підтримкою трьох мов: українська, російська, англійська. Для тих, хто хоче розібратись у сучасних змінах.</p>
+        <a class="card-link" href="https://github.com/serge47-cyber/BasicAI" target="_blank">
+          ⟶ github.com/serge47-cyber/BasicAI
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- EASYLINGO CROSS-LINGUAL -->
+  <section>
+    <h2>EasyLingo: крос-мовні можливості для всіх</h2>
+    <p>Це, мабуть, найцікавіша частина. Сучасні AI-тьютори більше не прив'язані до однієї пари мов. EasyLingo дозволяє вчити <em>будь-яку мову через будь-яку іншу</em> — залежно від того, хто ти і звідки.</p>
+
+    <table class="lang-table">
+      <thead>
+        <tr>
+          <th>Хто ти</th>
+          <th>Яку мову вчиш</th>
+          <th>Що отримуєш</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="flag">🇺🇸</span> Американець</td>
+          <td>Румунська</td>
+          <td>Пояснення англійською, порівняння з латинськими коренями, вимова з транскрипцією</td>
+        </tr>
+        <tr>
+          <td><span class="flag">🇺🇦</span> Українець</td>
+          <td>Румунська</td>
+          <td>Пояснення українською, паралелі зі слов'янськими мовами, контекст Молдови і Буковини</td>
+        </tr>
+        <tr>
+          <td><span class="flag">🇺🇦</span> Українець</td>
+          <td>Англійська</td>
+          <td>Двомовні вправи, ситуативні діалоги, бізнес і повсякденна лексика</td>
+        </tr>
+        <tr>
+          <td><span class="flag">🇷🇴</span> Румун</td>
+          <td>Українська</td>
+          <td>Пояснення румунською, акцент на спільні балканські та слов'янські риси</td>
+        </tr>
+        <tr>
+          <td><span class="flag">🌍</span> Будь-хто</td>
+          <td>Інша мова</td>
+          <td>Гнучка пара «рідна → цільова» на вибір учня</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Чому саме румунська? Тому що це мова, яку традиційно важко знайти в якісних digital-ресурсах — особливо для україномовних або слов'яномовних учнів. AI-тьютор заповнює цю нішу елегантно: він знає і контекст, і граматику, і культурні особливості.</p>
+
+    <div class="pull-quote">
+      <p>«Раніше для вивчення рідкісної мові потрібен був або репетитор, або дорогий курс. Тепер достатньо відкрити браузер і описати, чого ти хочеш.»</p>
+    </div>
+  </section>
+
+  <!-- EASYLESSON -->
+  <section>
+    <h2>EasyLesson: підручник → живий урок</h2>
+    <p>Для викладачів EasyLesson — це революція у підготовці матеріалів. Уяви: є PDF-підручник з граматики або тематичної лексики. Ти завантажуєш його в додаток — і за кілька секунд отримуєш:</p>
+    <ul class="steps">
+      <li>структурований інтерактивний урок із розділами і поясненнями</li>
+      <li>словниковий список з перекладом і прикладами</li>
+      <li>вправи на закріплення — у форматі тестів, заповнення пропусків, пар</li>
+      <li>Student Handout і Progress Report — готові документи для роздачі учням</li>
+    </ul>
+    <p>Це безпосередньо пов'язано з концепцією <strong>EasyEnglish</strong> — освітньої платформи, яку я розробляю для свого блогу. EasyLesson — це технологічна основа для генерації уроків із реальних навчальних матеріалів.</p>
+  </section>
+
+  <!-- BASIC AI -->
+  <hr class="divider">
+  <section>
+    <h2>BasicAI: розберися зі штучним інтелектом — з нуля</h2>
+    <p>Третій проєкт — трохи інший за природою. BasicAI — це курс, який допомагає <em>зрозуміти ШІ</em>, а не лише використовувати його. Це важливо, бо ми живемо в епоху, коли AI-інструменти стають такою ж базовою навичкою, як вміння читати або рахувати.</p>
+    <p>Курс містить <strong>17 уроків</strong> — від «що таке нейронна мережа» до «як захиститися від дезінформації» — і підтримує три мови інтерфейсу: українську, російську та англійську.</p>
+    <p>Аудиторія курсу широка: вчителі, студенти, підприємці, батьки — всі, хто хоче орієнтуватися в сучасних змінах, а не просто слідувати хайпу. Курс побудований у форматі «explorer» (знайомство) і «practitioner» (практичне застосування) — залежно від рівня підготовки.</p>
+    <p>Посилання: <a href="https://serge47-cyber.github.io/BasicAI" target="_blank">serge47-cyber.github.io/BasicAI</a></p>
+  </section>
+
+  <!-- CONCLUSION -->
+  <section>
+    <h2>Висновок: ми живемо у вікно можливостей</h2>
+    <p>Те, що раніше вимагало команди розробників і місяців роботи, сьогодні можна зробити самому — за дні. Вайбкодінг — це не магія і не замінник знань. Це новий тип мислення: сформулювати ідею чітко, ітерувати швидко, публікувати сміливо.</p>
+    <p>Якщо ти педагог, методист, або просто людина з гарною ідеєю для освітнього проєкту — зараз найкращий момент, щоб почати. Інструменти є. Бар'єри — мінімальні.</p>
+    <div class="pull-quote">
+      <p>«Найкращий момент для старту — коли технологія вже достатньо зріла, але ринок ще не переповнений. Це саме зараз.»</p>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-block">
+    <h3 style="color:#fff; font-size:1.05rem; margin-bottom:0.5rem; font-family:'DM Sans',sans-serif;">Досліджуй проєкти</h3>
+    <p>Всі додатки відкриті та безкоштовні. Спробуй, адаптуй, запропонуй покращення.</p>
+    <div class="links">
+      <a class="btn btn-blue" href="https://github.com/serge47-cyber/EasyLesson" target="_blank">EasyLesson →</a>
+      <a class="btn btn-blue" href="https://github.com/serge47-cyber/EasyLingo" target="_blank">EasyLingo →</a>
+      <a class="btn btn-blue" href="https://serge47-cyber.github.io/BasicAI" target="_blank">BasicAI →</a>
+      <a class="btn btn-outline" href="http://iasienglishclass.blogspot.com" target="_blank">Блог →</a>
+    </div>
+  </div>
+
+</article>
+</body>
+</html>
